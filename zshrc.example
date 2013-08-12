@@ -1,0 +1,243 @@
+autoload -U compinit
+compinit
+
+zmodload zsh/complist
+zstyle ':completion:*' menu yes select
+
+export CLICOLOR=1
+export LSCOLORS=exfxcxdxbxegedabagacad
+export LS_COLORS='di=34;40:ln=35;40:so=32;40:pi=33;40:ex=31;40:bd=34;46:cd=34;43:su=0;41:sg=0;46:tw=0;42:ow=0;43:'
+zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
+
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path ~/.zsh/cache
+
+setopt AUTO_CD BSD_ECHO
+
+_force_rehash() {
+  (( CURRENT == 1 )) && rehash
+  return 1
+}
+
+zstyle ':completion:::::' completer _force_rehash _complete
+
+setopt SH_WORD_SPLIT #пробелы как в bash
+
+if [ -e $HOME/.ssh/known_hosts ] ; then
+  hosts=(${${${(f)"$(<$HOME/.ssh/known_hosts)"}%%\ *}%%,*})
+  zstyle ':completion:*:hosts' hosts $hosts
+fi
+
+typeset -U path cdpath fpath manpath
+
+autoload -U predict-on
+zle -N predict-on
+zle -N predict-off
+bindkey "^X^Z" predict-on # C-x C-z
+bindkey "^Z" predict-off # C-z
+
+autoload -U zcalc zed
+
+export HISTFILE=~/.zsh_history
+export HISTSIZE=1000
+export SAVEHIST=1000
+setopt APPEND_HISTORY HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS
+
+bindkey '^[[3~' delete-char
+bindkey '^E' expand-cmd-path
+
+alias df='df -h'
+alias du='du -sh'
+alias grep='egrep --color=auto'
+
+hash -d data=/Volumes/Data\ HD/
+hash -d itunes=/Volumes/Data\ HD/Music/iTunes\ Music/
+
+[ -r /etc/debian_version ] && [ -x 'which sudo' ] && alias upgrade='sudo apt-get update && sudo apt-get -u upgrade'
+
+# Aliases
+alias g='git'
+compdef g=git
+alias gst='git status'
+compdef _git gst=git-status
+alias gd='git diff'
+compdef _git gd=git-diff
+alias gl='git pull'
+compdef _git gl=git-pull
+alias gup='git pull --rebase'
+compdef _git gup=git-fetch
+alias gp='git push'
+compdef _git gp=git-push
+alias gd='git diff'
+gdv() { git diff -w "$@" | view - }
+compdef _git gdv=git-diff
+alias gc='git commit -v'
+compdef _git gc=git-commit
+alias gc!='git commit -v --amend'
+compdef _git gc!=git-commit
+alias gca='git commit -v -a'
+compdef _git gc=git-commit
+alias gca!='git commit -v -a --amend'
+compdef _git gca!=git-commit
+alias gco='git checkout'
+compdef _git gco=git-checkout
+alias gcm='git checkout master'
+alias gr='git remote'
+compdef _git gr=git-remote
+alias grv='git remote -v'
+compdef _git grv=git-remote
+alias grmv='git remote rename'
+compdef _git grmv=git-remote
+alias grrm='git remote remove'
+compdef _git grrm=git-remote
+alias grset='git remote set-url'
+compdef _git grset=git-remote
+alias grup='git remote update'
+compdef _git grset=git-remote
+alias grbi='git rebase -i'
+compdef _git grbi=git-rebase
+alias grbc='git rebase --continue'
+compdef _git grbc=git-rebase
+alias grba='git rebase --abort'
+compdef _git grba=git-rebase
+alias gb='git branch'
+compdef _git gb=git-branch
+alias gba='git branch -a'
+compdef _git gba=git-branch
+alias gcount='git shortlog -sn'
+compdef gcount=git
+alias gcl='git config --list'
+alias gcp='git cherry-pick'
+compdef _git gcp=git-cherry-pick
+alias glg='git log --stat --max-count=5'
+compdef _git glg=git-log
+alias glgg='git log --graph --max-count=5'
+compdef _git glgg=git-log
+alias glgga='git log --graph --decorate --all'
+compdef _git glgga=git-log
+alias glo='git log --oneline'
+compdef _git glo=git-log
+alias gss='git status -s'
+compdef _git gss=git-status
+alias ga='git add'
+compdef _git ga=git-add
+alias gm='git merge'
+compdef _git gm=git-merge
+alias grh='git reset HEAD'
+alias grhh='git reset HEAD --hard'
+alias gclean='git reset --hard && git clean -dfx'
+alias gwc='git whatchanged -p --abbrev-commit --pretty=medium'
+alias gf='git ls-files | grep'
+alias gpoat='git push origin --all && git push origin --tags'
+alias gmt='git mergetool --no-prompt'
+compdef _git gm=git-mergetool
+
+alias gg='git gui citool'
+alias gga='git gui citool --amend'
+alias gk='gitk --all --branches'
+alias gsts='git stash show --text'
+
+# Will cd into the top of the current repository
+# or submodule.
+alias grt='cd $(git rev-parse --show-toplevel || echo ".")'
+
+# Git and svn mix
+alias git-svn-dcommit-push='git svn dcommit && git push github master:svntrunk'
+compdef git-svn-dcommit-push=git
+
+alias gsr='git svn rebase'
+alias gsd='git svn dcommit'
+#
+# Will return the current branch name
+# Usage example: git pull origin $(current_branch)
+#
+function current_branch() {
+  ref=$(git symbolic-ref HEAD 2> /dev/null) || \
+  ref=$(git rev-parse --short HEAD 2> /dev/null) || return
+  echo ${ref#refs/heads/}
+}
+
+function current_repository() {
+  ref=$(git symbolic-ref HEAD 2> /dev/null) || \
+  ref=$(git rev-parse --short HEAD 2> /dev/null) || return
+  echo $(git remote -v | cut -d':' -f 2)
+}
+
+# these aliases take advantage of the previous function
+alias ggpull='git pull origin $(current_branch)'
+compdef ggpull=git
+alias ggpur='git pull --rebase origin $(current_branch)'
+compdef ggpur=git
+alias ggpush='git push origin $(current_branch)'
+compdef ggpush=git
+alias ggpnp='git pull origin $(current_branch) && git push origin $(current_branch)'
+compdef ggpnp=git
+
+# Pretty log messages
+function _git_log_prettily(){
+  if ! [ -z $1 ]; then
+    git log --pretty=$1
+  fi
+}
+alias glp="_git_log_prettily"
+compdef _git glp=git-log
+
+
+PATH=$PATH:$HOME/.rvm/bin # Add RVM to PATH for scripting
+
+### Added by the Heroku Toolbelt
+export PATH="/usr/local/heroku/bin:$PATH"
+
+git config color.diff auto --global
+git config color.status auto --global
+
+alias v="vagrant"
+alias vst="vagrant status"
+alias vup="vagrant up"
+alias vpr="vagrant provision"
+alias vhl="vagrant halt"
+alias vre="vagrant reload"
+alias vssh="vagrant ssh"
+
+source ~/.git-flow-completion.zsh
+
+autoload -Uz vcs_info
+autoload colors zsh/terminfo
+
+zstyle ':vcs_info:*' stagedstr '%F{28} ✗'
+zstyle ':vcs_info:*' unstagedstr '%F{11} ✗'
+zstyle ':vcs_info:*' check-for-changes true
+zstyle ':vcs_info:(sv[nk]|bzr):*' branchformat '%b%F{1}:%F{11}%r'
+zstyle ':vcs_info:*' enable git svn
+precmd () {
+    if [[ -z $(git ls-files --other --exclude-standard 2> /dev/null) ]] {
+        zstyle ':vcs_info:*' formats '%F{blue}(%F{cyan}%b%c%u%F{blue})'
+    } else {
+        zstyle ':vcs_info:*' formats '%F{blue}(%F{cyan}%b%c%u%F{red} ✗%F{blue})'
+    }
+ 
+    vcs_info
+}
+ 
+setopt prompt_subst
+PROMPT='%F{blue}%n@%m %c${vcs_info_msg_0_}%F{blue} %(?/%F{blue}/%F{red})%% %{$reset_color%}'
+
+PROMPT='%B%F{green}%n@%m%f:%F{blue}%c%f${vcs_info_msg_0_}%F%b%(!.#.$) '
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
